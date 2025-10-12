@@ -3,113 +3,113 @@ import sys
 import random
 import datetime
 
-class Joueur:
-    def __init__(self, nom, couleur):
-        self.nom = nom
-        self.couleur = couleur
-        self.pierres = 60 
-        self.date_creation = datetime.datetime.now()  # timestemp de creation
+class Player:
+    def __init__(self, name, color):
+        self.name = name
+        self.color = color
+        self.stones = 60 
+        self.creation_date = datetime.datetime.now()  # creation timestamp
     
-    # Methode pour formater l'affichage
+    # Method to format display
     def __str__(self):
-        return f"{self.nom} ({self.couleur})"
+        return f"{self.name} ({self.color})"
 
-class Case:
-    def __init__(self, coordonnees):
-        self.coordonnees = coordonnees  # tuple (x, y)
-        self.etat = "inoccupee"  # "noir", "blanc", "inoccupee"
+class Square:
+    def __init__(self, coordinates):
+        self.coordinates = coordinates  # tuple (x, y)
+        self.state = "unoccupied"  # "black", "white", "unoccupied"
         
-    # Verifie si la case est libre
-    def est_libre(self):
-        return self.etat == "inoccupee"
+    # Check if square is free
+    def is_free(self):
+        return self.state == "unoccupied"
 
-class Plateau:
-    def __init__(self, taille=15):
-        self.taille = taille
-        self.cases = {}
-        self.initialiser_plateau()
+class Board:
+    def __init__(self, size=15):
+        self.size = size
+        self.squares = {}
+        self.initialize_board()
         
-    def initialiser_plateau(self):
-        for i in range(self.taille):
-            for j in range(self.taille):
-                self.cases[(i, j)] = Case((i, j))
+    def initialize_board(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                self.squares[(i, j)] = Square((i, j))
     
-    def afficher_plateau(self):
+    def display_board(self):
         print("\n  ", end="")
-        for i in range(self.taille):
+        for i in range(self.size):
             print(f"{i:2}", end="")
         print()
         
-        for i in range(self.taille):
+        for i in range(self.size):
             print(f"{i:2}", end="")
-            for j in range(self.taille):
-                case = self.cases[(i, j)]
-                if case.etat == "noir":
+            for j in range(self.size):
+                square = self.squares[(i, j)]
+                if square.state == "black":
                     print(" ●", end="")
-                elif case.etat == "blanc":
+                elif square.state == "white":
                     print(" ○", end="")
                 else:
                     print(" +", end="")
             print()
         print()
 
-class ControleurJeu:
-    def __init__(self, taille_plateau=15):
-        self.plateau = Plateau(taille_plateau)
-        self.joueurs = []
-        self.joueur_actuel_index = 0
-        self.configurer_joueurs()
+class GameController:
+    def __init__(self, board_size=15):
+        self.board = Board(board_size)
+        self.players = []
+        self.current_player_index = 0
+        self.configure_players()
     
-    def configurer_joueurs(self):
-        # Configure les joueurs au debut
-        print("Configuration du Jeu de Gomoku")
-        nom1 = input("Entrez le nom du joueur 1: ")
-        nom2 = input("Entrez le nom du joueur 2: ")
+    def configure_players(self):
+        # Configure players at start
+        print("Gomoku Game Configuration")
+        name1 = input("Enter player 1 name: ")
+        name2 = input("Enter player 2 name: ")
         
-        # Assignation des couleurs
+        # Color assignment
         if random.random() > 0.5:
-            self.joueurs.append(Joueur(nom1, "noir"))
-            self.joueurs.append(Joueur(nom2, "blanc"))
+            self.players.append(Player(name1, "black"))
+            self.players.append(Player(name2, "white"))
         else:
-            self.joueurs.append(Joueur(nom1, "blanc"))
-            self.joueurs.append(Joueur(nom2, "noir"))
+            self.players.append(Player(name1, "white"))
+            self.players.append(Player(name2, "black"))
         
-        print(f"\n{self.joueurs[0].nom} utilise les pierres {self.joueurs[0].couleur} ●")
-        print(f"{self.joueurs[1].nom} utilise les pierres {self.joueurs[1].couleur} ○\n")
+        print(f"\n{self.players[0].name} uses {self.players[0].color} stones ●")
+        print(f"{self.players[1].name} uses {self.players[1].color} stones ○\n")
     
-    def obtenir_joueur_actuel(self):
-        return self.joueurs[self.joueur_actuel_index]
+    def get_current_player(self):
+        return self.players[self.current_player_index]
     
-    def changer_joueur(self):
-        self.joueur_actuel_index = 1 - self.joueur_actuel_index
+    def switch_player(self):
+        self.current_player_index = 1 - self.current_player_index
     
-    def valider_coordonnees(self, entree_utilisateur):
+    def validate_coordinates(self, user_input):
         pattern = r'^\((\d+),(\d+)\)$'
-        correspondance = re.match(pattern, entree_utilisateur)
+        match = re.match(pattern, user_input)
         
-        if not correspondance:
-            return None, "Erreur: Format invalide, utilisez (x,y)"
+        if not match:
+            return None, "Error: Invalid format, use (x,y)"
         
         try:
-            x = int(correspondance.group(1))
-            y = int(correspondance.group(2))
+            x = int(match.group(1))
+            y = int(match.group(2))
         except ValueError:
-            return None, "Erreur: Les coordonnées doit être numeriques"
+            return None, "Error: Coordinates must be numeric"
         
-        if x < 0 or x >= self.plateau.taille or y < 0 or y >= self.plateau.taille:
-            return None, f"Erreur: Coordonnées hors de limites (0-{self.plateau.taille-1})"
+        if x < 0 or x >= self.board.size or y < 0 or y >= self.board.size:
+            return None, f"Error: Coordinates out of bounds (0-{self.board.size-1})"
         
         return (x, y), None
     
-    def case_est_occupee(self, coordonnees):
-        return not self.plateau.cases[coordonnees].est_libre()
+    def is_square_occupied(self, coordinates):
+        return not self.board.squares[coordinates].is_free()
     
-    def placer_pierre(self, coordonnees, couleur):
-        case = self.plateau.cases[coordonnees]
-        case.etat = couleur
+    def place_stone(self, coordinates, color):
+        square = self.board.squares[coordinates]
+        square.state = color
     
-    def verifier_victoire(self, coordonnees, couleur):
-        x, y = coordonnees
+    def check_victory(self, coordinates, color):
+        x, y = coordinates
         directions = [
             (1, 0),   # horizontal
             (0, 1),   # vertical  
@@ -118,113 +118,113 @@ class ControleurJeu:
         ]
         
         for dx, dy in directions:
-            compteur = 1  # commence avec la pierre placee
+            counter = 1  # start with placed stone
             
-            # Verification dans une direction
+            # Check in one direction
             for i in range(1, 5):
                 nx, ny = x + dx * i, y + dy * i
-                if (nx, ny) in self.plateau.cases and self.plateau.cases[(nx, ny)].etat == couleur:
-                    compteur += 1
+                if (nx, ny) in self.board.squares and self.board.squares[(nx, ny)].state == color:
+                    counter += 1
                 else:
                     break
             
-            # Verification dans la direction oppose
+            # Check in opposite direction
             for i in range(1, 5):
                 nx, ny = x - dx * i, y - dy * i
-                if (nx, ny) in self.plateau.cases and self.plateau.cases[(nx, ny)].etat == couleur:
-                    compteur += 1
+                if (nx, ny) in self.board.squares and self.board.squares[(nx, ny)].state == color:
+                    counter += 1
                 else:
                     break
             
-            ### Condition de victoire
-            if compteur >= 5:
+            ### Victory condition
+            if counter >= 5:
                 return True
         
         return False
     
-    def verifier_egalite(self):
-        return all(joueur.pierres == 0 for joueur in self.joueurs)
+    def check_draw(self):
+        return all(player.stones == 0 for player in self.players)
     
-    def abandonner_partie(self):
-        joueur_actuel = self.obtenir_joueur_actuel()
-        print(f"{joueur_actuel.nom} abandonne la partie!")
-        self.changer_joueur()
-        gagnant = self.obtenir_joueur_actuel()
-        print(f"Vainqueur: {gagnant.nom}!")
-        return "partie_terminee"
+    def surrender_game(self):
+        current_player = self.get_current_player()
+        print(f"{current_player.name} surrenders!")
+        self.switch_player()
+        winner = self.get_current_player()
+        print(f"Winner: {winner.name}!")
+        return "game_over"
     
-    def tour_joueur(self):
-        joueur_actuel = self.obtenir_joueur_actuel()
+    def player_turn(self):
+        current_player = self.get_current_player()
         
-        print(f"\n=== Tour de {joueur_actuel.nom} ({joueur_actuel.couleur}) ===")
-        print(f"Pierres restantes: {joueur_actuel.pierres}")
+        print(f"\n=== {current_player.name}'s turn ({current_player.color}) ===")
+        print(f"Stones remaining: {current_player.stones}")
         
         while True:
-            entree = input("Coordonnées (x,y), 'quitter', 'abandonner': ").strip()
+            entry = input("Coordinates (x,y), 'quit', 'surrender': ").strip()
             
-            if entree.lower() == 'quitter':
-                print("Au revoir!")
+            if entry.lower() == 'quit':
+                print("Goodbye!")
                 sys.exit()
-            elif entree.lower() == 'abandonner':
-                return self.abandonner_partie()
+            elif entry.lower() == 'surrender':
+                return self.surrender_game()
             
-            coordonnees, erreur = self.valider_coordonnees(entree)
-            if erreur:
-                print(erreur)
+            coordinates, error = self.validate_coordinates(entry)
+            if error:
+                print(error)
                 continue
             
-            if self.case_est_occupee(coordonnees):
-                print("Case occupee - choisissez une autre position")
+            if self.is_square_occupied(coordinates):
+                print("Square occupied - choose another position")
                 continue
             
-            # Placement de la pierre
-            self.placer_pierre(coordonnees, joueur_actuel.couleur)
-            joueur_actuel.pierres -= 1
+            # Place stone
+            self.place_stone(coordinates, current_player.color)
+            current_player.stones -= 1
             
-            # Affichage mise a jour
-            self.plateau.afficher_plateau()
+            # Display updated board
+            self.board.display_board()
             
-            ### Verification des conditions de fin
-            if self.verifier_victoire(coordonnees, joueur_actuel.couleur):
-                print(f"Felicitations! {joueur_actuel.nom} gagne!")
-                return "partie_terminee"
+            ### Check end conditions
+            if self.check_victory(coordinates, current_player.color):
+                print(f"Congratulations! {current_player.name} wins!")
+                return "game_over"
             
-            if self.verifier_egalite():
-                print("Egalite! Plus de pierres disponible")
-                return "partie_terminee"
+            if self.check_draw():
+                print("Draw! No more stones available")
+                return "game_over"
             
-            # Passage au joueur suivant
-            self.changer_joueur()
-            return "continuer"
+            # Switch to next player
+            self.switch_player()
+            return "continue"
     
-    def demarrer_jeu(self):
-        print("Jeu de Gomoku")
-        print("Commandes disponible:")
-        print("  (x,y) - placer une pierre")
-        print("  abandonner - capituler")
-        print("  quitter - quitter le jeu")
+    def start_game(self):
+        print("Gomoku Game")
+        print("Available commands:")
+        print("  (x,y) - place a stone")
+        print("  surrender - capitulate")
+        print("  quit - quit the game")
         
-        self.plateau.afficher_plateau()
+        self.board.display_board()
         
         while True:
-            resultat = self.tour_joueur()
+            result = self.player_turn()
             
-            if resultat == "partie_terminee":
-                print("Merci d'avoir joue!")
+            if result == "game_over":
+                print("Thank you for playing!")
                 break
 
-### Entree du programme
+### Program entry point
 if __name__ == "__main__":
-    # Configuration de la taille du plateau
+    # Board size configuration
     while True:
         try:
-            taille = int(input("Taille du plateau (15 ou 19, defaut 15): ") or "15")
-            if taille not in [15, 19]:
-                print("Choix: 15 ou 19")
+            size = int(input("Board size (15 or 19, default 15): ") or "15")
+            if size not in [15, 19]:
+                print("Choice: 15 or 19")
                 continue
             break
         except ValueError:
-            print("Veuillez entrer un nombre valide")
+            print("Please enter a valid number")
     
-    jeu = ControleurJeu(taille)
-    jeu.demarrer_jeu()
+    game = GameController(size)
+    game.start_game()
