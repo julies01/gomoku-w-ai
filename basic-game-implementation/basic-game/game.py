@@ -122,11 +122,12 @@ class Game :
         ai_level_choice : int = checks.int_in_range("Enter 1, 2 or 3 : ", 1, 3)
 
         # Create AI player
-        ai_player = Player("AI")
+        ai_player = AI(ai_level_choice) 
         ai_player.color = 'black'
         self.players.append(ai_player)
         
-        self.starting_player = self.players[1]  # AI starts
+        self.starting_player = self.players[1]
+        
 
         print(f"\nGame setup: {self.players[0].name} (White) vs {self.players[1].name} (Black)")
         print(f"{self.starting_player.name} starts first.")
@@ -224,10 +225,80 @@ class Game :
         return 0
 
     def play_ai_match(self):
-        """Play match between human and AI"""
-        print("AI match gameplay - implementation in progress")
-        # Placeholder - return random result for testing
-        return random.choice([0, 1, 2])
+        """
+        Manages the game flow between a human player and the AI.
+        Returns: 1 if Player 1 wins, 2 if Player 2 wins, 0 if draw.
+        """
+        # Assumes AI is Player 2 (index 1) and Human is Player 1 (index 0)
+        ai_object = self.players[1] 
+        current_turn = self.starting_player
+        
+        # Ensure the AI's 'around' tables are initialized at the start of the match
+        if isinstance(ai_object, AI):
+            ai_object.set_tables(self.board) 
+        
+        while True:
+            self.board.third_display()
+            player_index = self.players.index(current_turn)
+            
+            # --- 1. MOVE INPUT/CALCULATION ---
+            
+            if isinstance(current_turn, AI):
+                # AI TURN
+                print(f"\nIt's {current_turn.name}'s turn ({current_turn.color}). Calculating best move...")
+                best_move = current_turn.get_best_move(self.board, current_turn.color)
+                
+                if best_move is None:
+                    print("No moves left. Draw.")
+                    return 0 
+                row, col = best_move
+            
+            else:
+                # HUMAN TURN
+                print(f"\nIt's {current_turn.name}'s turn ({current_turn.color}). You have {current_turn.stones} stones left.")
+                
+                while True:
+                    wanted_coordinates = input("\nEnter coordinates (e.g., '8,8') or 'quit': ").strip()
+                    
+                    if wanted_coordinates.lower() == 'quit':
+                        print("Goodbye!")
+                        exit()
+
+                    try:
+                        # Checks if input is valid coordinates and square is empty
+                        row, col = checks.place_stone(wanted_coordinates, self.board)
+                        break
+                    except Exception as e:
+                        print(f"Invalid input: {e}")
+                        continue
+            
+            # --- 2. EXECUTION AND TABLE UPDATE ---
+            
+            # Record move
+            checks.record_game_move(player_index, (row, col), current_turn.stones)
+            self.board.grid[row][col].place_stone(current_turn.color)
+            current_turn.stones -= 1
+            
+            # UPDATE 'AROUND' TABLES FOR WINDOW SEARCH OPTIMIZATION
+            if isinstance(ai_object, AI):
+                if current_turn.color == 'white':
+                    ai_object.update_white_around(self.board, row, col)
+                else: # current_turn.color == 'black'
+                    ai_object.update_black_around(self.board, row, col)
+            
+            # --- 3. CHECK END GAME ---
+            if checks.draw(self.players):
+                return 0 
+            
+            if checks.win(current_turn.color, (row, col), self.board):
+                self.board.third_display()
+                print(f"\nCongratulations {current_turn.name}! You won the game!\n")
+                return player_index + 1 
+
+            # Next player
+            current_turn = self.players[1 - player_index]
+
+
 
     def play_ai_vs_ai_match(self):
         """Play match between two AIs"""
