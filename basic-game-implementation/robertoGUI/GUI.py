@@ -4,22 +4,36 @@ from AI.AI import AI
 
 class GomokuGUI:
 
-    def __init__(self):
-        self.window = tk.Tk()
-        self.window.title("Gomoku")
+    def __init__(self, container=None, end_game_callback=None):
+        self.window = container if container else tk.Tk()
+        self.end_game_callback = end_game_callback
 
         self.board = Board(15)
         self.ai = AI(level=1)
+        self.ai.set_tables(self.board)
 
         self.size = 600
         self.cell = self.size // self.board.size
+        self.last_move = None
 
         self.canvas = tk.Canvas(self.window, width=self.size, height=self.size, bg="#F0D9B5")
         self.canvas.pack()
-
         self.canvas.bind("<Button-1>", self.on_click)
 
         self.draw_grid()
+        self.ai_first_move()
+
+    def ai_first_move(self):
+        # this is just cuz in the CLI code the ai begins first, i needed it to test if the AI works in the same way here (it does :D)
+        row, col = self.board.size // 2, self.board.size // 2
+
+        self.board.place_stone(row, col, "black")  
+        self.draw_stone(row, col, "black")
+
+        self.ai.update_black_around(self.board, row, col)
+
+        self.last_move = (row, col)
+
 
     def draw_grid(self):
         for i in range(self.board.size):
@@ -40,25 +54,48 @@ class GomokuGUI:
         col = event.x // self.cell
         row = event.y // self.cell
 
-        if self.board.place_stone(row, col, "black"):
-            self.draw_stone(row, col, "black")
+        if not self.board.place_stone(row, col, "white"):
+            return
+        self.draw_stone(row, col, "white")
 
-        if self.board.check_win(row, col, "black"):
+        self.ai.update_white_around(self.board, row, col)
+
+        if self.board.check_win(row, col, "white"):
             self.end_game("You won!")
             return
 
-        self.ai_turn()
+        self.last_move = (row, col)
+        self.window.after(100, self.ai_turn)
+
 
     def ai_turn(self):
-        row, col = self.ai.choose_move(self.board)
-        self.board.place_stone(row, col, "white")
-        self.draw_stone(row, col, "white")
+        if self.last_move is None:
+            return
 
-        if self.board.check_win(row, col, "white"):
+        best_move = self.ai.get_best_move(self.board, self.ai.color)
+        if best_move is None:
+            self.end_game("Draw")
+            return
+
+        row, col = best_move
+
+        if not self.board.place_stone(row, col, self.ai.color):
+            print("AI tried invalid move:", row, col)
+            return
+
+        self.draw_stone(row, col, self.ai.color)
+
+        self.ai.update_black_around(self.board, row, col)
+
+        self.last_move = None
+
+        if self.board.check_win(row, col, self.ai.color):
             self.end_game("AI won!")
 
-    def run(self):
-        self.window.mainloop()
+
+    def run_in_frame(self):
+        if isinstance(self.window, tk.Tk):
+            self.window.mainloop()
 
     def end_game(self, text):
         self.canvas.unbind("<Button-1>")
@@ -69,3 +106,5 @@ class GomokuGUI:
             font=("Arial", 32),
             fill="red"
         )
+        if self.end_game_callback:
+            self.canvas.after(2000, self.end_game_callback)
