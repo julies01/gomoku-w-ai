@@ -3,9 +3,9 @@ import random
 
 class AI:
 
-    def __init__(self, level: int):
+    def __init__(self, level: int, color: str):
         self.level = level
-        self.color = "black"
+        self.color = color
         self.stones = 60
         self.white_around = None
         self.black_around = None
