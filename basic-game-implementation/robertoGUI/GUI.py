@@ -3,14 +3,20 @@ from components.Board import Board
 from AI.AI import AI
 
 class GomokuGUI:
-    def __init__(self, container=None, end_game_callback=None, mode=1, player1_name="Player", player2_name="Player 2", ai1_level=1, ai2_level=1, board_size=15):
+    def __init__(self, container=None, end_game_callback=None, mode=1, 
+                 player1_name="Player", player2_name="Player 2", 
+                 ai1_level=1, ai2_level=1, board_size=15, update_stones_callback=None):
         self.window = container if container else tk.Tk()
         self.end_game_callback = end_game_callback
+        self.update_stones_callback = update_stones_callback
         self.mode = mode
+        self.last_move = None
+
         self.player1_name = player1_name
         self.player2_name = player2_name
         self.ai1_level = ai1_level
         self.ai2_level = ai2_level
+        self.player_stones = {"black": 60, "white": 60}
 
         self.board = Board(board_size)
         self.size = 600 if board_size == 15 else 760
@@ -26,20 +32,19 @@ class GomokuGUI:
                     AI(ai1_level, "black") if mode in [1, 3] else None,
                     AI(ai2_level, "white") if mode == 3 else None
                 ]
-        
-        if self.ai[0]: self.ai[0].set_tables(self.board)
-        if self.ai[1]: self.ai[1].set_tables(self.board)
 
         self.draw_grid()
+        self.current_player = "black"
 
-        if mode == 1:
-            self.current_player = "black"
+        if mode != 2:
             self.ai_first_move()
-        else:
-            self.current_player = "black"
 
-        if mode == 3:
-            self.ai_first_move()
+    def destroy(self):
+        self.canvas.unbind("<Button-1>")
+        self.canvas.after_cancel("all")
+        self.canvas.destroy()
+        self.board = None
+        self.ai = []
 
     def ai_first_move(self):
         row, col = self.board.size // 2, self.board.size // 2
@@ -47,16 +52,23 @@ class GomokuGUI:
         self.board.place_stone(row, col, "black")  
         self.draw_stone(row, col, "black")
 
-        self.ai[0].update_black_around(self.board, row, col)
-
         self.last_move = (row, col)
+
+        self.ai[0].stones -= 1
+
+        if self.update_stones_callback:
+            if self.mode == 1:
+                p1_count = self.ai[0].stones
+                p2_count = self.player_stones["white"]
+            elif self.mode == 3:
+                p1_count = self.ai[0].stones
+                p2_count = self.ai[1].stones
+            self.update_stones_callback(p1_count, p2_count)
 
         self.switch_player()
 
         if self.mode == 3:
-            self.ai[1].update_black_around(self.board, row, col)
             self.window.after(100, self.ai_turn, 1)
-
 
     def draw_grid(self):
         for i in range(self.board.size):
@@ -74,6 +86,29 @@ class GomokuGUI:
         
         self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=fill, outline=outline)
 
+        if self.mode == 2 or (self.mode == 1 and color == "white"):
+            self.player_stones[color] -= 1
+
+        if self.update_stones_callback:
+            if self.mode == 1:
+                p1_count = self.ai[0].stones
+                p2_count = self.player_stones["white"]
+            elif self.mode == 2:
+                p1_count = self.player_stones["black"]
+                p2_count = self.player_stones["white"]
+            else:
+                p1_count = self.ai[0].stones
+                p2_count = self.ai[1].stones
+            self.update_stones_callback(p1_count, p2_count)
+
+        if self.mode == 1 and self.player_stones["white"] <= 0:
+            self.end_game(f"AI won! ({self.player1_name} ran out of stones)")
+        elif self.mode == 2:
+            if self.player_stones["black"] <= 0:
+                self.end_game(f"{self.player2_name} won! ({self.player1_name} ran out of stones)")
+            elif self.player_stones["white"] <= 0:
+                self.end_game(f"{self.player1_name} won! ({self.player2_name} ran out of stones)")
+
     def get_name(self, player):
         if player == "black":
             if self.mode == 1:
@@ -82,12 +117,13 @@ class GomokuGUI:
                 return self.player1_name
             else:
                 return "AI 1"
-        elif self.mode == 1:
-            return self.player1_name
-        elif self.mode == 2:
-            return self.player2_name
         else:
-            return "AI 2"
+            if self.mode == 1:
+                return self.player1_name
+            elif self.mode == 2:
+                return self.player2_name
+            else:
+                return "AI 2"
 
     def switch_player(self):
         self.current_player = "white" if self.current_player == "black" else "black"
@@ -106,9 +142,6 @@ class GomokuGUI:
             return
         self.draw_stone(row, col, self.current_player)
 
-        if self.mode == 1:
-            self.ai[0].update_white_around(self.board, row, col)
-
         if self.board.check_win(row, col, self.current_player):
             self.end_game(f"{self.get_name(self.current_player)} won!")
             return
@@ -118,7 +151,6 @@ class GomokuGUI:
         if self.mode == 1:
             self.last_move = (row, col)
             self.window.after(100, self.ai_turn, 0)
-
 
     def ai_turn(self, ai_n: int):
         if self.last_move is None:
@@ -137,16 +169,24 @@ class GomokuGUI:
             return
 
         self.draw_stone(row, col, self.ai[ai_n].color)
+        self.ai[ai_n].stones -= 1
 
-        if self.mode == 3:
-            if ai_n == 0:
-                self.ai[0].update_black_around(self.board, row, col)
-                self.ai[1].update_black_around(self.board, row, col)
-            else:
-                self.ai[0].update_white_around(self.board, row, col)
-                self.ai[1].update_white_around(self.board, row, col)
-        else:
-            self.ai[0].update_black_around(self.board, row, col)
+        if self.update_stones_callback:
+            if self.mode == 1:
+                p1_count = self.ai[0].stones
+                p2_count = self.player_stones["white"]
+            elif self.mode == 3:
+                p1_count = self.ai[0].stones
+                p2_count = self.ai[1].stones
+            self.update_stones_callback(p1_count, p2_count)
+
+        if self.mode == 1 and self.ai[0].stones <= 0:
+            self.end_game(f"{self.player1_name} won! (AI ran out of stones)")
+        elif self.mode == 3:
+            if self.ai[0].stones <= 0:
+                self.end_game("AI 2 won! (AI 1 ran out of stones)")
+            elif self.ai[1].stones <= 0:
+                self.end_game("AI 1 won! (AI 2 ran out of stones)")
 
         if self.board.check_win(row, col, self.ai[ai_n].color):
             self.end_game(f"{self.get_name(self.ai[ai_n].color)} won!")
@@ -154,7 +194,7 @@ class GomokuGUI:
         self.switch_player()
 
         if self.mode == 3:
-            self.window.after(100, self.ai_turn, 0 if ai_n == 1 else 1)
+            self.window.after(2001, self.ai_turn, 0 if ai_n == 1 else 1)
 
     def run_in_frame(self):
         if isinstance(self.window, tk.Tk):
@@ -170,4 +210,5 @@ class GomokuGUI:
             fill="red"
         )
         if self.end_game_callback:
-            self.canvas.after(2000, self.end_game_callback)
+            winner = 1 if self.current_player == "black" else 2
+            self.canvas.after(1500, lambda: self.end_game_callback(winner))
