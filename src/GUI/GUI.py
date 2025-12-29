@@ -1,11 +1,12 @@
 import tkinter as tk
+from tkinter import messagebox
 from components.Board import Board
 from AI.AI import AI
 
 class GomokuGUI:
     def __init__(self, container=None, end_game_callback=None, mode=1, 
                  player1_name="Player", player2_name="Player 2", 
-                 ai1_level=1, ai2_level=1, board_size=15, update_stones_callback=None):
+                 ai1_level=1, ai2_level=1, board_size=15, update_stones_callback=None, loaded_board=None):
         
         self.window = container if container else tk.Tk()
         # Callbacks, one for game end and one to update the stone count externally
@@ -30,6 +31,12 @@ class GomokuGUI:
         self.pad = 40
         self.cell = (self.size - 2 * self.pad) / (board_size - 1)
 
+        # If a loaded board is provided, use it
+        if loaded_board is not None:
+            self.board = loaded_board
+        else:
+            self.board = Board(board_size)
+
         # Create the canvas where the board and stones will be drawn
         self.canvas = tk.Canvas(self.window, width=self.size, height=self.size, bg="#F0D9B5")
         self.canvas.pack()
@@ -45,6 +52,10 @@ class GomokuGUI:
 
         # Black always starts first in Gomoku
         self.current_player = "black"
+
+        # If a loaded board is provided, draw its stones
+        if loaded_board is not None:
+            self.draw_loaded_stones()
 
         # AI are in mode 1 and mode 3
         if mode != 2:
@@ -131,6 +142,22 @@ class GomokuGUI:
                 self.end_game(f"{self.player2_name} won! ({self.player1_name} ran out of stones)")
             elif self.player_stones["white"] <= 0:
                 self.end_game(f"{self.player1_name} won! ({self.player2_name} ran out of stones)")
+
+
+    #If a configuration file is loaded, draw the stones already on the loaded Board
+    def draw_loaded_stones(self):
+        # Iterate through the board
+        for row in range(self.board.size):
+            for col in range(self.board.size):
+                state = self.board.grid[row][col].state
+                # Draw stones based on their state
+                if state is not None:  # "black" ou "white"
+                    x = self.pad + col * self.cell
+                    y = self.pad + row * self.cell
+                    r = self.cell * 0.45
+                    fill = "black" if state == "black" else "white"
+                    outline = "black" if state == "white" else ""
+                    self.canvas.create_oval(x-r, y-r, x+r, y+r, fill=fill, outline=outline)
 
     # Return the display name of a player based on color and game mode
     # In the AIvAI mode, the AI's names are "AI 1" and "AI 2"
@@ -250,14 +277,9 @@ class GomokuGUI:
         # Disable further user interaction
         self.canvas.unbind("<Button-1>")
         
-        # Display the result text in the center of the board
-        self.canvas.create_text(
-            self.size // 2,
-            self.size // 2,
-            text=text,
-            font=("Arial", 32),
-            fill="red"
-        )
+        # Display the result text in a message box
+        messagebox.showinfo(message=text)
+        
         # Notify external components about the game result after a short delay
         if self.end_game_callback:
             winner = 1 if self.current_player == "black" else 2

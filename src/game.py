@@ -1,5 +1,7 @@
 import tkinter as tk
-from GUI import GomokuGUI
+from GUI.GUI import GomokuGUI
+from GUI.GUI_create_configuration import ConfigurationScreen
+from GUI.GUI_load_configuration import LoadConfigurationScreen
 
 class Game:
     def __init__(self):
@@ -8,6 +10,15 @@ class Game:
         self.window.title("Gomoku")
         self.window.geometry("600x600")
         self.window.configure(bg="#2C3E50")
+
+        # Load and set application icons of various sizes
+        icon_16 = tk.PhotoImage(file="gomoku_icons/gomoku_16_icon.png")
+        icon_32 = tk.PhotoImage(file="gomoku_icons/gomoku_32_icon.png")
+        icon_64 = tk.PhotoImage(file="gomoku_icons/gomoku_64_icon.png")
+        icon_128 = tk.PhotoImage(file="gomoku_icons/gomoku_128_icon.png")
+        icon_256 = tk.PhotoImage(file="gomoku_icons/gomoku_256_icon.png")
+
+        self.window.iconphoto(False, icon_256, icon_128, icon_64, icon_32, icon_16)
 
         # Default game settings
         self.mode = 1  # 1 = PvAI, 2 = PvP, 3 = AIvAI
@@ -24,6 +35,7 @@ class Game:
         # State tracking variables
         self.current_state = None
         self.gomoku_frame = None
+        self.loaded_board = None
 
         # Start by showing the main menu
         self.show_menu()
@@ -306,8 +318,55 @@ class Game:
             for b in levelAI2: b.pack(pady=2)
             self.updateAi2Buttons(levelAI2)
 
+        #Those buttons allow to load or create a board configuration
+        config_frame = tk.Frame(self.window, bg="#3C4E5E")
+        config_frame.pack(pady=10, anchor="center")
+
+        load_config = tk.Button(config_frame, text="Load a board configuration", font=("Fredoka", 14), borderwidth=0,bg="#95A5A6", fg="#2C3E50",
+                    command=lambda: self.load_configuration())
+        load_config.pack(side="left", padx=5, pady=5,anchor="s")
+        create_config = tk.Button(config_frame, text="Create a board configuration", font=("Fredoka", 14), borderwidth=0,bg="#95A5A6", fg="#2C3E50",
+                    command=lambda: self.create_game_configuration())
+        create_config.pack(side="left", padx=5, pady=5,anchor="s")
+
         # Back button to return to main menu
         self.styled_button("Back to Menu", self.show_menu).pack(pady=10)
+
+    #this function is made to ask the user what board size he wants for his custom configuration
+    def create_game_configuration(self):
+        self.clear_window()
+        self.current_state = "create_configuration"
+        self.window.geometry("600x600")
+
+        back_button = tk.Button(self.window, text="Back to Menu", command=self.show_menu,
+                                font=("Fredoka", 16),borderwidth=0)
+        back_button.pack(anchor="nw", pady=30, padx=10)
+
+        t_board_size = tk.Label(self.window, text="What board size do you want ?", font=("Fredoka", 20), fg="#ECF0F1", bg="#2C3E50")
+        t_board_size.pack(pady=40)
+
+        b_15 = tk.Button(self.window, text="15x15", font=("Fredoka", 16),  borderwidth=0, command=lambda: self.configuration(15), background='#2C3E50')
+        b_15.pack(pady=10)
+        b_19 = tk.Button(self.window, text="19x19", font=("Fredoka", 16), borderwidth=0, command=lambda: self.configuration(19), background='#2C3E50')
+        b_19.pack(pady=10)
+
+    #this function show the configuration creation screen
+    def configuration(self, board_size):
+        self.clear_window()
+        self.current_state = "create_configuration"
+        self.config_screen = ConfigurationScreen(self.window, board_size, self.show_menu,self.receive_loaded_config)
+
+    #this function purposes is to load a game configuration chosen by the user
+    def load_configuration(self):
+        self.clear_window()
+        self.current_state = "load_configuration"
+        self.load_config_screen = LoadConfigurationScreen(self.window, self.show_menu, self.show_options, self.receive_loaded_config)
+
+    #this function receive the loaded configuration from the LoadConfigurationScreen class and input it in the game
+    def receive_loaded_config(self, board_config, board_size):
+        self.loaded_board = board_config
+        self.board = board_size
+        self.show_options()
 
     # --- GAME STATE ---
     def show_game(self):
@@ -391,8 +450,11 @@ class Game:
             ai1_level=self.aiLevel,
             ai2_level=self.aiLevel2,
             board_size=self.board,
-            update_stones_callback=self.update_stones
+            update_stones_callback=self.update_stones,
+            loaded_board=self.loaded_board
+
         )
+        self.loaded_board = None  # Reset loaded board after use
 
         self.gomoku.run_in_frame()
 
