@@ -78,7 +78,7 @@ class ConfigurationScreen:
         white_row = tk.Frame(inner, bg="#FFFFFF")
         white_row.pack(pady=6, anchor="w")
         white_stone = tk.Canvas(white_row, width=stone_size, height=stone_size, bd=0, highlightthickness=0, bg="#FFFFFF", cursor="hand2")
-        white_stone.create_oval(4, 4, -4, -4, fill="#ffffff", outline="#000000", width=1)
+        white_stone.create_oval(4, 4, stone_size-4, stone_size-4, fill="#ffffff", outline="#000000", width=1)
         white_stone.pack(side="left")
         white_stone.bind("<Button-1>", lambda e: self.set_color("#ffffff"))
         # White stone counter
@@ -87,10 +87,10 @@ class ConfigurationScreen:
         # Black stone
         black_row = tk.Frame(inner, bg="#FFFFFF")
         black_row.pack(pady=6, anchor="w")
-        black_sw = tk.Canvas(black_row, width=stone_size, height=stone_size, bd=0, highlightthickness=0, bg="#FFFFFF", cursor="hand2")
-        black_sw.create_oval(4, 4, -4, -4, fill="#000000", outline="#000000", width=1)
-        black_sw.pack(side="left")
-        black_sw.bind("<Button-1>", lambda e: self.set_color("#000000"))
+        black_stone = tk.Canvas(black_row, width=stone_size, height=stone_size, bd=0, highlightthickness=0, bg="#FFFFFF", cursor="hand2")
+        black_stone.create_oval(4, 4, stone_size-4, stone_size-4, fill="#000000", outline="#000000", width=1)
+        black_stone.pack(side="left")
+        black_stone.bind("<Button-1>", lambda e: self.set_color("#000000"))
 
         # Black stone counter
         tk.Label(black_row, textvariable=self.black_count_var, font=("Fredoka", 14), bg="#FFFFFF", fg="#000000").pack(side="left", padx=10)
