@@ -61,7 +61,41 @@ Description des machines à états finies implémentées <br>
 Description de la hiérarchie de machines à états finies <br>
 Attention : plusieurs représentations possibles des mêmes connaissances peuvent être utilisées dans un même programme en fonction des traitements associés
 
-## Description détaillée d'une ou plusieurs situations traitées par notre programme
+
+
+
+# Description détaillée d'une ou plusieurs situations traitées par notre programme
+
+## Situation 1 : Gestion d'un cas d'urgence
+
+**Problème :** si l'adversaire a aligné 4 pions avec une case vide au bout, et que l'ia ne le bloque pas, elle perd au prochain tour. Cela signifie qu'il est essentiel que l'ia place son pion a cet endroit. Inversement, si l'ia a aligné 4 pions et que c'est a son tour de jouer, elle n'a pas a calculer plusieurs coup a l'avance pour rien.
+
+
+
+C'est pourquoi avant le lancement de l'algorithme alpha-beta on verifie le plateau actuel en lançant `find_immediate_threat` avec sa propre couleur, afin de vérifier si une potentiel victoire est possible.
+
+La fonction `find_immediate_threat` fonctionne ainsi :
+* Elle récupère les coups potentiellements gagnant (les cases vides adjacentes)
+* Elle simule la pose d'un pion sur chaque case candidates
+* Elle appelle `check_win_move` qui regarde si cela crée un alignement de 5.
+
+Apres cela, on vérifie `find_immediate_threat` avec la couleur adverse.
+
+Dans le cas ou une condition de victoire ou de défaite et trouvée, on ne lance pas l'algorithme alpha-beta et on retourne les coordonnées du coup gagnant ou permettant d'éviter la défaite.
+
+
+## Situation 2 : Optimisation de la recherche
+
+Dans le cas ou aucune menace n'est détectée, l'ia doit choisir efficacement le meilleur placement pour avoir le plus de chance de victoire.
+
+**Problème :** Il y a un trop grand nombre de possibilité (environ 200 cases vides). Calculer tout les scénarios serait beacoup trop long, et en augmentant la profondeur cela augmente exponentiellement.
+
+1. C'est pourquoi le programme fait une pré selection des movements intéressant. L'ia utilise la fonction `get_relevant_move` pour ne prendre en compte que les movement adjacents à des pions déjà existants. Cela permet d'ignorer la majeure partie du plateau remplie de cases vide.
+2. Ensuite l'ia descend dans l'arbre des possibilités : si l'ia joue a un certain endroit, alors le joueur a beaucoup de chance de jouer ici, etc...
+3. Elle utilise l'élagage afin de diminuer le nombre de branche a explorer, par exemple, si l'ia trouve une branche qui lui donne a la fin 100 points, et que dans une autre branche elle voit que l'adversaire peut réduire le score à 50, il n'y a pas grand intérêt a continuer de chercher dans cette branche.
+4. Avant de calculer, on vérifie si la configuration du plateau a déjà été calculée auparavant pour avoir un gain de temps.
+
+
 ## Résultat obtenus sur notre programme sur ces situations
 
 ## Difficultés rencontrées
