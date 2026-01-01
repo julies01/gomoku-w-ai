@@ -3,7 +3,7 @@
 ## Présentation du jeu
 Le Gomoku est un jeu de plateau abstrait d'origine chinoise qui se joue avec des pièces du jeu de Go (pièces noires et blanches). Le but du jeu est de placer ses pions de manière à former un alignement horizontal, vertical ou en diagonale de 5 pions. 
 
-Le plateau est vide en début de partie. Tour à tour, les joueurs posent un de leurs pions sur une intersection libre. Une intersection est libre si elle ne contient pas déjà un pion. Dès qu’un joueur réalise une configuration gagnante, la partie s’arrête. Si les deux joueurs ont épuisé l’entierté de leurs pions et qu’aucun joueur n’a obtenu la configuration gagante, la partie s’arrête sur un match nul.
+Le plateau est vide en début de partie. Tour à tour, les joueurs posent un de leurs pions sur une intersection libre. Une intersection est libre si elle ne contient pas déjà un pion. Dès qu’un joueur réalise une configuration gagnante, la partie s’arrête. Si les deux joueurs ont épuisé l’entierté de leurs pions et qu’aucun joueur n’a obtenu la configuration gagnante, la partie s’arrête sur un match nul.
 
 ## Énoncé du problème
 
@@ -37,14 +37,14 @@ Nous avons décidé d'organiser des réunions régulièrement avec le groupe pou
 _Photo, capture d'écran_ ?
 
 **2ème réunion (19/10/2025) :**
-Lors de la deuxième réunion, nous étions quatre membres du groupe. Nous avaons toout d'abord joué tous ensemble au Gomoku pour que tout le monde soit bien au point du jeu, des règles, des stratégies pour gagner. Nous avons aussi partagé des idées quand à la manière de vérifier qu'un joueur avait posé la pièce manquante. Nous avons réfléchi à l'algorithme des plus proches voisins qui serait adopté pour une vérification plus optimisée au lieu de scanner chaque diagonale, chaque verticale, chaque horizontale du plateau. Nous avons décidé de procéder à la partie IA en faisant des recherches chacun de notre côté.
+Lors de la deuxième réunion, nous étions quatre membres du groupe. Nous avons tout d'abord joué tous ensemble au Gomoku pour que tout le monde soit bien au point du jeu, des règles, des stratégies pour gagner. Nous avons aussi partagé des idées quand à la manière de vérifier qu'un joueur avait posé la pièce manquante. Nous avons réfléchi à l'algorithme des plus proches voisins qui serait adopté pour une vérification plus optimisée au lieu de scanner chaque diagonale, chaque verticale, chaque horizontale du plateau. Nous avons décidé de procéder à la partie IA en faisant des recherches chacun de notre côté.
 
 
 **3ème réunion (17/11/2025) :**
-Avec les différents ponts et jours fériés en octobre + les vacances nous avons passé beaucoup de temps sans nous réunir. Pendant ce temps nous avons tous cherché des algorithmes, fait des recherches sur ce qui existe déjà et les bonnes pratiques. Chacun a présenter son travail pendant une dizaine de minutes. Nous avons présenter nos fonctions d'évaluation, nos algorithmes et leur fonctionnement en détail grâce à des schémas. Nous en sommes arrivés à la conclusion que l'algorithme Alpha-Beta avec élagage est l'algorithme qui convient le meiux à notre programme.
+Avec les différents ponts et jours fériés en octobre + les vacances nous avons passé beaucoup de temps sans nous réunir. Pendant ce temps nous avons tous cherché des algorithmes, fait des recherches sur ce qui existe déjà et les bonnes pratiques. Chacun a présenté son travail pendant une dizaine de minutes. Nous avons présenter nos fonctions d'évaluation, nos algorithmes et leur fonctionnement en détail grâce à des schémas. Nous en sommes arrivés à la conclusion que l'algorithme Alpha-Beta avec élagage est l'algorithme qui convient le meiux à notre programme.
 
 **4ème réunion (17/11/2025) :**
-
+Réunion finale consacrée à l'organisation à avoir pendant les vacances pour respecter les échéances, et finir les derniers ajustement du code et la rédaction de ce rapport.
 
 
 
@@ -101,11 +101,10 @@ Nous avons adopté la Programmation Orientée Objet (POO). Le système est const
 
 #### Description des variables d'états
 Dans l'algorithme de l'IA, les variables d'état clés suivantes sont utilisées :
-* **`depth`** : Profondeur de recherche actuelle (définie à `2 * level` dans le code).
+* **`depth`** : Profondeur de recherche actuelle (définie à `level` dans le code).
 * **`alpha` & `beta`** : Bornes utilisées pour l'élagage.
-* **`white_around` / `black_around`** (Optimisation majeure) :
-    * Ce sont deux tableaux auxiliaires de $15 \times 15$ maintenus dans la classe `AI`.
-    * **Rôle** : Enregistrer quelles cases vides ont des pions adjacents. Lors de la génération des coups candidats, l'IA ne considère que ces "zones actives", réduisant le facteur de branchement de 225 à environ 20-30.
+* **`transposition_table`** : Dictionnaire utilisé pour la Mémorisation. Il stocke les configurations de plateau déjà analysées (signature, score, profondeur) pour éviter les recalculs inutiles. Pour cela, on mets le plateau sous la forme d'un tuple.
+* **`relevant_moves`** : Liste générée dynamiquement à chaque étape (via `get_relevant_moves`) qui ne contient que les cases vides adjacentes à des pions existants. Cela réduit drastiquement le nombre de branche recherchées.
 
 #### Description des machines à états finies (FSM)
 Dans `Game.py`, une machine à états de haut niveau gère le flux du programme :
@@ -116,20 +115,35 @@ Dans `Game.py`, une machine à états de haut niveau gère le flux du programme 
 
 ## Description détaillée d'une ou plusieurs situations traitées par notre programme
 
-**Scénario : L'IA défend contre un "Trois Vivant"**
+## Situation 1 : Gestion d'un cas d'urgence
 
-* **Situation** : L'IA joue les Noirs (2ème joueur). Les Blancs ont formé un "trois vivant" au centre (trois pions consécutifs, extrémités vides). Sans blocage, les Blancs formeront un "quatre vivant" au prochain coup et gagneront.
-* **Traitement** :
-    1.  Appel de la fonction `get_best_move`.
-    2.  Le programme consulte `white_around` et identifie les extrémités du "trois" comme candidats prioritaires.
-    3.  **Simulation** :
-        * Si l'IA simule un coup ailleurs, la récursion descend au niveau suivant (tour des Blancs).
-        * Les Blancs détectent une victoire imminente (4 puis 5 pions). `evaluate_board` retourne un score très bas (défaite).
-        * L'algorithme Alpha-Bêta coupe ces branches.
-    4.  **Défense** :
-        * L'IA simule un coup à une extrémité du "trois" (blocage).
-        * Au niveau suivant, l'offensive blanche est brisée. Le score, bien que passif, est nettement supérieur à une défaite.
-* **Résultat** : L'IA choisit le blocage.
+**Problème :** si l'adversaire a aligné 4 pions avec une case vide au bout, et que l'ia ne le bloque pas, elle perd au prochain tour. Cela signifie qu'il est essentiel que l'ia place son pion a cet endroit. Inversement, si l'ia a aligné 4 pions et que c'est a son tour de jouer, elle n'a pas a calculer plusieurs coup a l'avance pour rien.
+
+
+
+C'est pourquoi avant le lancement de l'algorithme alpha-beta on verifie le plateau actuel en lançant `find_immediate_threat` avec sa propre couleur, afin de vérifier si une potentiel victoire est possible.
+
+La fonction `find_immediate_threat` fonctionne ainsi :
+* Elle récupère les coups potentiellements gagnant (les cases vides adjacentes)
+* Elle simule la pose d'un pion sur chaque case candidates
+* Elle appelle `check_win_move` qui regarde si cela crée un alignement de 5.
+
+Apres cela, on vérifie `find_immediate_threat` avec la couleur adverse.
+
+Dans le cas ou une condition de victoire ou de défaite et trouvée, on ne lance pas l'algorithme alpha-beta et on retourne les coordonnées du coup gagnant ou permettant d'éviter la défaite.
+
+
+## Situation 2 : Optimisation de la recherche
+
+Dans le cas ou aucune menace n'est détectée, l'ia doit choisir efficacement le meilleur placement pour avoir le plus de chance de victoire.
+
+**Problème :** Il y a un trop grand nombre de possibilité (environ 200 cases vides). Calculer tout les scénarios serait beacoup trop long, et en augmentant la profondeur cela augmente exponentiellement.
+
+1. C'est pourquoi le programme fait une pré selection des movements intéressant. L'ia utilise la fonction `get_relevant_move` pour ne prendre en compte que les movement adjacents à des pions déjà existants. Cela permet d'ignorer la majeure partie du plateau remplie de cases vide.
+2. Ensuite l'ia descend dans l'arbre des possibilités : si l'ia joue a un certain endroit, alors le joueur a beaucoup de chance de jouer ici, etc...
+3. Elle utilise l'élagage afin de diminuer le nombre de branche a explorer, par exemple, si l'ia trouve une branche qui lui donne a la fin 100 points, et que dans une autre branche elle voit que l'adversaire peut réduire le score à 50, il n'y a pas grand intérêt a continuer de chercher dans cette branche.
+4. Avant de calculer, on vérifie si la configuration du plateau a déjà été calculée auparavant pour avoir un gain de temps.
+
 
 ## Résultat obtenus sur notre programme sur ces situations
 
@@ -137,7 +151,7 @@ Dans `Game.py`, une machine à états de haut niveau gère le flux du programme 
 * **Intelligence** :
     * **Level 1** : Réponse rapide, reconnaissance des alignements simples.
     * **Level 3** : Recherche plus profonde, défense solide contre les attaques complexes et exploitation des erreurs adverses.
-* **Efficacité** : Grâce à l'optimisation des tables `around`, le temps de réponse initial est très rapide (<0.5s). Sur un plateau encombré avec une profondeur élevée, le temps monte à 1-2s, ce qui reste acceptable.
+* **Efficacité** : Grâce à l'optimisation combinée de l'élagage Alpha-Bêta, de la recherche locale (Window Search) et de la Table de Transposition, le temps de réponse reste convenable, même avec une profondeur de 3. L'IA est capable de detecter les menaces immédiates instantanément grâce à sa fonction dédiée.
 
 ## Difficultés rencontrées
 
@@ -149,13 +163,17 @@ Dans `Game.py`, une machine à états de haut niveau gère le flux du programme 
     * Difficulté à déterminer le ratio attaque/défense. Faut-il bloquer un "quatre" adverse ou construire son "trois" ?
     * **Solution** : Hiérarchie stricte par ordres de grandeur : **Mon 5 > Son 5 (Défense) > Mon 4 > Son 4**.
 
+3. **Gestion de l'espace de recherche**
+   * Nous avons tenté de maintenir des tableau d'adjacence (`aroundtables`) mis à jour en temps réel. Cependant cette approche s'est révélée trop complexe lors de la recursion.
+   * Nous avons donc opté pour une génération dynamique des coups (`get_relevant_moves), qui semble finalement assez performante.
+
 ## Améliorations possibles
 
 1.  **Fonction Annuler (Undo)**
     * Implémentable via une pile `history` dans la classe `Board` (push à chaque coup, pop pour annuler).
 
 2.  **Table de transposition**
-    * Utilisation du Hachage Zobrist pour mettre en cache les configurations de plateau déjà calculées et éviter le recalcul.
+    * Actuellement la clé de notre table de transposition est un tuple complet du plateau. En utilisant le hachage zobrist, il serait possible de calculer la clé unique du plateau plus rapidement ce qui permettrait un gain de temps conséquent.
 
 3.  **Algorithme VCF (Victory by Continuous Fours)**
     * Ajouter un module de recherche spécialisé pour trouver les chemins de victoire par "quatre" consécutifs, plus efficace que Minimax en fin de partie.
