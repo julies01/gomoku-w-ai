@@ -107,11 +107,74 @@ Dans l'algorithme de l'IA, les variables d'état clés suivantes sont utilisées
 * **`relevant_moves`** : Liste générée dynamiquement à chaque étape (via `get_relevant_moves`) qui ne contient que les cases vides adjacentes à des pions existants. Cela réduit drastiquement le nombre de branche recherchées.
 
 #### Description des machines à états finies (FSM)
-Dans `Game.py`, une machine à états de haut niveau gère le flux du programme :
-1.  **MENU** : Menu principal, attente du choix de mode.
-2.  **OPTIONS** : Configuration (`AI Level`, `Board Size`).
-3.  **PLAY** : Boucle de jeu (`wait_for_click` -> `update_board` -> `check_win` -> `switch_player`).
-4.  **GAME_OVER** : Affichage du vainqueur et retour au menu.
+
+Dans `Game.py`, le flux du programme est géré à l’aide d’une machine à états finie (FSM) implémentée au-dessus de **Tkinter**.  
+Il ne s’agit pas d’une FSM explicite avec une pile personnalisée, mais d’une **gestion implicite des états**, reposant sur :
+- la destruction et la création dynamique des widgets (`clear_window`),
+- les callbacks Tkinter (`command=...`),
+- la boucle d’événements principale (`mainloop`).
+
+Chaque écran correspond à un **état logique**, et les transitions sont déclenchées par les interactions de l’utilisateur.
+
+### États principaux de la FSM
+
+1. **MENU**  
+   État initial de l’application, affiché par la fonction `show_menu`.  
+   Il présente les actions principales :
+   - lancer une partie,
+   - accéder aux options,
+   - quitter le jeu.  
+
+   Le passage vers un autre état s’effectue via des callbacks de boutons, par exemple :
+   - `show_options`
+   - `ask_rules_before_play`
+
+2. **ASK_RULES**  
+   État intermédiaire affiché avant le lancement du jeu.  
+   Il demande à l’utilisateur s’il souhaite consulter les règles.  
+   Selon la réponse :
+   - transition vers **RULES**,
+   - ou transition directe vers **PLAY**.
+
+3. **RULES**  
+   État d’affichage statique des règles du Gomoku.  
+   Aucune logique de jeu n’est exécutée.  
+   Cet état agit comme une **couche temporaire**, depuis laquelle l’utilisateur peut :
+   - revenir au **MENU**,
+   - ou lancer la partie (**PLAY**).
+
+4. **OPTIONS**  
+   L’état **OPTIONS** permet la configuration complète du jeu :
+   - mode de jeu (PvAI, PvP, AIvAI),
+   - niveau des IA,
+   - taille du plateau,
+   - nombre de manches (`Best of`).  
+
+   Les modifications sont appliquées immédiatement via des callbacks, puis l’utilisateur peut revenir au **MENU**.
+
+5. **PLAY**  
+   L’état **PLAY** correspond à la phase de jeu active.  
+   Il est initialisé par `show_game` et repose sur :
+   - la création dynamique de frames Tkinter,
+   - l’intégration du module `GomokuGUI`,
+   - les callbacks `update_stones` et `update_scores`.  
+
+   Le jeu reste dans cet état jusqu’à la fin d’une manche ou d’une série de manches.
+
+6. **GAME OVER / END BEST OF**  
+   Il ne s’agit pas d’un état graphique séparé, mais d’un **état logique** déclenché par `update_scores`.  
+   Lorsque le nombre de victoires requis est atteint :
+   - les scores sont réinitialisés,
+   - une transition automatique vers **MENU** est effectuée.
+
+### Gestion implicite des états et “stack” Tkinter
+
+La gestion des états ne repose pas sur une pile explicite, mais sur le **modèle événementiel de Tkinter**, qui agit comme un **stack implicite d’écrans** :
+
+- chaque transition détruit l’état courant via `clear_window`,
+- un nouvel état est ensuite créé et affiché,
+- les callbacks conservent le contexte logique (variables de la classe `Game`).
+
 
 ## Description détaillée d'une ou plusieurs situations traitées par notre programme
 
